@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+from bs4 import BeautifulSoup as bs
+import requests
+import time
+import re
+import warnings
+warnings.filterwarnings("ignore")
+import jieba
+import numpy
+import pandas as pd
+from wordcloud import WordCloud
+import codecs
+import matplotlib.pyplot as plt
+
+headers = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.221 Safari/537.36 SE 2.X MetaSr 1.0'
+}
+
+#获取正在热播电影的电影id和电影名
+def getNowplayMovies_list():
+    url = "https://movie.douban.com/cinema/nowplaying/shenzhen/"
+    web_data = requests.get(url,headers = headers)
+    soup = bs(web_data.text,'lxml')
+    nowplaying = soup.find_all('div',id='nowplaying')
+    nowplaying_movies_list = nowplaying[0].find_all('li',class_='list-item')
+    nowplaying_list = []
+    for item in nowplaying_movies_list:
+        nowplaying_dict = {}
+        nowplaying_dict['id'] = item['data-subject']
+        for tag_img_item in item.find_all('img'):
+            nowplaying_dict['name'] = tag_img_item['alt']
+            nowplaying_list.append(nowplaying_dict)
+    # print(nowplaying_list)
+    return nowplaying_list
+
+#根据电影的id抓取评论
+#https://movie.douban.com/subject/26425068/reviews?start=20
+def getCommentById(movieId,pageNum):
+    each_comment_list = []
+    if int(pageNum)>0:
+        start = (pageNum-1) * 20
+    else:
+        return False
+    #requrl = 'https://movie.douban.com/subject/' + movieId + '/comments' +'?' +'start=' + str(start) + '&limit=20'
+    # requrl = ['https://movie.douban.com/subject/' + movieId + 'reviews?start={}'.format(str(i)) for i in range(0,start,20)]
+    requrl = 'https://movie.douban.com/subject/' + movieId + '/comments' +'?' +'start' + str(start)  + '&limit=20'
+    print(requrl)
+    webdata = requests.get(requrl,headers=headers)
+    soup = bs(webdata.text,'lxml')
+    if soup.find_all('h3'):
+        short_comments = soup.select('div.comment-item div.comment p')
+        for short_comment in short_comments:
+            short_comment = short_comment.get_text().strip()
+            each_comment_list.append(short_comment)
+        # print(each_comment_list)
+        return each_comment_list
+    else:
+        pass
+# getCommentById('27038183',8)
+
+def main(pagenums=10,moviesid=5):
+    #循环获取一个电影的前面10页影评
+    comment_list = []
+    NowplayMovies_list = getNowplayMovies_list()
+    for i in range(pagenums):
+        num = i + 1
+        commentList_temp = getCommentById(NowplayMovies_list[moviesid]['id'],num)
+        comment_list.append(commentList_temp)
+        # print(comment_list)
+
+    #将列表中的数字转换成字符串
+    comments = ''
+    for k in range(len(comment_list)):
+        comments = comments + (str(comment_list[k])).strip()
+
+    #使用正则表达式去除标点符号
+    pattern = re.compile(r'[\u4e00-\u9fa5]+')
+    filterdata = re.findall(pattern,comments)
+    cleaned_comments = ''.join(filterdata)
+
+    # 使用结巴分词进行中文分词
+    segment = jieba.lcut(cleaned_comments)
+    words_df = pd.DataFrame({'segment':segment})
+
+    # 统计词频
+    words_stat = words_df.groupby(by=['segment'])['segment'].agg({"计数":numpy.size})
+    words_stat = words_stat.reset_index().sort_values(by=["计数"],ascending=False)
+
+    # 用词云进行显示
+    wordcloud = WordCloud(font_path="simhei.ttf", background_color="white", max_font_size=80)
+    word_frequence = {x[0]: x[1] for x in words_stat.head(1000).values}
+
+    word_frequence_list = []
+    for key in word_frequence:
+        temp = (key, word_frequence[key])
+        word_frequence_list.append(temp)
+
+    wordcloud = wordcloud.fit_words(dict(word_frequence_list))
+    plt.imshow(wordcloud)
+    plt.axis('off')
+    plt.show()
+
+main(15,6)
