@@ -1,0 +1,83 @@
+#!/usr/bin/python
+#-*-encoding:utf-8 -*-
+
+import requests,urllib,urllib3
+from urllib import request
+from bs4 import BeautifulSoup as bs
+import time
+import random
+import os.path
+
+urls = ['http://www.meizitu.com/a/more_{}.html'.format(str(i)) for i in range(1,2,1)]
+turl = 'http://www.meizitu.com/a/5545.html'
+tarpath = 'D:\meizitu'
+
+user_agent = [
+    'Mozilla/5.0 (Windows NT 5.2) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.122 Safari/534.30',
+    'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.2; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET4.0E; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)',
+    'Opera/9.80 (Windows NT 5.1; U; zh-cn) Presto/2.9.168 Version/11.50',
+    'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022; .NET4.0E; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)'
+]
+
+headers = {
+    'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Cache-Control':'max-age=0',
+    'Connection':'keep-alive',
+    'User-Agent':random.choice(user_agent)
+}
+
+#获取列表url链接和文件名称
+def get_url_list(url):
+    l = []
+    web_data = requests.get(url,headers = headers)
+    web_data.encoding = 'GBK'
+    soup = bs(web_data.text,'lxml')
+    time.sleep(2)
+    titles = soup.select('ul.wp-list div.con h3 b')
+    links = soup.select('ul.wp-list div.con h3 a')
+
+    for title,link in zip(titles,links):
+        title = title.get_text()
+        link = link.get('href')
+        l.append([link,title])
+    return l
+# print(get_url_list(url))
+
+#获取每个url内部的图片链接
+def get_imgs(url):
+    ls = []
+    a = 0
+    urls = get_url_list(url)
+    for rl in urls:
+        # print(rl[0])
+        webd = requests.get(rl[0],headers=headers)
+        soup = bs(webd.text,'lxml')
+        # imgs = soup.find_all('div',id='picture')
+        imgs = soup.select('div#picture img')
+        for i in imgs:
+            i = i['src']
+            a += 1
+            name = str(rl[1])+str(a)
+            ls.append([name,i])
+
+    return ls
+
+for single_url in urls:
+    k = 1
+    ks = get_imgs(single_url)
+    for b in ks:
+        # print(b[0],b[1])
+        # request.urlretrieve(b[1],'D:\\meizitu\\%s.jpg' %b[0])
+        print(u'正在下载%d'%k)
+        fp = open('D:\\meizitu\\'+b[0]+'.jpg','wb')
+        im = urllib.request.urlopen(b[1]).read()
+        fp.write(im)
+        fp.close()
+        k += 1
+
+
+#根据文件夹名称创建文件夹，并下载对应照片集
+def download_imgs(filename,url):
+    os.path.exists()
