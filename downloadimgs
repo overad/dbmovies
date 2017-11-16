@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from bs4 import BeautifulSoup as bs
+import requests
+import os
+import glob
+import urllib.request
+import time
+
+url = 'https://movie.douban.com/cinema/nowplaying/shenzhen/'
+
+headers = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.221 Safari/537.36 SE 2.X MetaSr 1.0'
+}
+
+def get_moveis_name(url):
+    l =[]
+    web_data = requests.get(url,headers=headers)
+    soup = bs(web_data.text,'lxml')
+    time.sleep(2)
+    names = soup.select('div#nowplaying  ul.lists  li.stitle a')
+    imgs = soup.select('div#nowplaying  ul.lists li.poster a img')
+    for name, img in zip(names,imgs):
+        img = img['src']
+        name = name['title'].strip()
+        l.append([img,name])
+    return l
+
+def save_into_files(url):
+    path = "d:\ostext\\"
+    os.chdir(path)
+    to_lists = os.listdir(path)
+    print(os.getcwd())
+    print(to_lists)
+
+    for filename in get_moveis_name(url):
+        title = filename[1]
+        imgurl = filename[0]
+        r = requests.get(imgurl,headers=headers)
+        imgname = imgurl.split('/')[-1]
+        # print(path+title)
+        if os.path.exists(title):
+            for to_list in to_lists:
+                if to_list == title:
+                    # with open(imgname,'ab') as f:
+                    #     f.write(r.content)
+                    urllib.request.urlretrieve(imgurl,path+title +'\%s.jpg'%title)
+
+        else:
+            os.mkdir(title)
+            urllib.request.urlretrieve(imgurl, path + title + '\%s.jpg' % title)
+
+if __name__ == '__main__':
+    save_into_files(url)
