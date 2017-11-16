@@ -1,0 +1,97 @@
+#!/usr/bin/python
+#-*-encoding:utf-8 -*-
+
+import requests
+import urllib.request
+from bs4 import BeautifulSoup as bs
+import time
+import random
+import os
+import pymongo
+
+client = pymongo.MongoClient('localhost',27017)
+db = client['mzt']
+
+# url = 'http://www.meizitu.com/a/more_2.html'
+urls = ['http://www.meizitu.com/a/more_{}.html'.format(str(i)) for i in range(1,72,1)]
+turl = 'http://www.meizitu.com/a/5545.html'
+tarpath = 'D:\meizitu'
+
+user_agent = [
+    'Mozilla/5.0 (Windows NT 5.2) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.122 Safari/534.30',
+    'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.2; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET4.0E; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)',
+    'Opera/9.80 (Windows NT 5.1; U; zh-cn) Presto/2.9.168 Version/11.50',
+    'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022; .NET4.0E; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)'
+]
+
+headers = {
+    'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Cache-Control':'max-age=0',
+    'Connection':'keep-alive',
+    'User-Agent':random.choice(user_agent)
+}
+
+#获取列表url链接和文件名称
+def get_url_list(url):
+    l = []
+    web_data = requests.get(url,headers = headers)
+    web_data.encoding = 'GBK'
+    soup = bs(web_data.text,'lxml')
+    time.sleep(1)
+    titles = soup.select('ul.wp-list div.con h3 b')
+    links = soup.select('ul.wp-list div.con h3 a')
+
+    for title,link in zip(titles,links):
+        title = title.get_text()
+        link = link.get('href')
+        l.append([link,title])
+    return l
+# print(get_url_list(url))
+
+
+#吧所有的文件夹和内部图片全部打包成列表
+def get_all_imgs(url):
+    ls = []
+    for file in get_url_list(url):
+        title = file[1]
+        imgurl = file[0]
+        web_data = requests.get(imgurl,headers=headers)
+        soup = bs(web_data.text,'lxml')
+        imgs = soup.select('div#picture img')
+        for img in imgs:
+            img = img['src']
+            ls.append([title,img])
+    return ls
+
+
+#下载已经打包好的列表图片（根据列表字段创建对应的文件夹）
+def download_img(url):
+    a = 0
+    path = 'e:\mzt\\'
+    # print(os.getcwd())
+    os.chdir(path)
+    # print(os.getcwd())
+    to_list = os.listdir()
+    for filename in get_all_imgs(url):
+        # filename = filename[0]
+        # imgname = filename[1]
+        # print(filename)
+        title = filename[0]
+        imgurl = filename[1]
+        imgname = imgurl.split('/')[-1]
+        # print(title,imgurl,imgname)
+        if os.path.exists(title):
+            for file in to_list:
+                if file == title:
+                    urllib.request.urlretrieve(imgurl,path+title +'%s'%imgname)
+        else:
+            os.mkdir(title)
+            urllib.request.urlretrieve(imgurl, path + title + '%s' % imgname)
+        a += 1
+        print(u'正在下载第'+a+u'个文件夹的图片')
+
+if __name__ == '__main__':
+    for single_url in urls:
+        download_img(single_url)
