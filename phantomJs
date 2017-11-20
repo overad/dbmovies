@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from bs4 import BeautifulSoup as bs
+from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.keys import Keys
+
+dcap = dict(DesiredCapabilities.PHANTOMJS)
+dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0 ")
+
+obj = webdriver.PhantomJS(executable_path='D:\\spider_tools\\phantomjs\\bin\\phantomjs.exe')
+obj.get('http://www.mmjpg.com/mm/1174')
+# obj.find_element_by_id('viewall').send_keys(Keys.ENTER)
+obj.execute_script("return openall(1)")
+# obj.save_screenshot('12.png')
+html = obj.page_source
+obj.quit()
+soup = bs(html,'lxml')
+imgs = soup.find('div',id="content").find_all('img')
+for img in imgs:
+    imglink = img['src']
+    imgname = imglink.split('/')[-1].split('.')[0]
+    print(imglink,imgname)
