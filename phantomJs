@@ -1,24 +1,107 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# from bs4 import BeautifulSoup as bs
+# from selenium import webdriver
+# from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+# from selenium.webdriver.common.keys import Keys
+
+# dcap = dict(DesiredCapabilities.PHANTOMJS)
+# dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0 ")
+
+# obj = webdriver.PhantomJS(executable_path='D:\\spider_tools\\phantomjs\\bin\\phantomjs.exe')
+# obj.get('http://www.mmjpg.com/mm/1174')
+# # obj.find_element_by_id('viewall').send_keys(Keys.ENTER)
+# obj.execute_script("return openall(1)")
+# # obj.save_screenshot('12.png')
+# html = obj.page_source
+# obj.quit()
+# soup = bs(html,'lxml')
+# imgs = soup.find('div',id="content").find_all('img')
+# for img in imgs:
+#     imglink = img['src']
+#     imgname = imglink.split('/')[-1].split('.')[0]
+#     print(imglink,imgname)
+bin/python
+#-*-encoding:utf-8 -*-
+
 from bs4 import BeautifulSoup as bs
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.common.keys import Keys
+import time
+import random
+import requests
+import os
+import urllib.request
 
-dcap = dict(DesiredCapabilities.PHANTOMJS)
-dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0 ")
+headers = {
+    'UserAgent ':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+}
+UserAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
 
-obj = webdriver.PhantomJS(executable_path='D:\\spider_tools\\phantomjs\\bin\\phantomjs.exe')
-obj.get('http://www.mmjpg.com/mm/1174')
-# obj.find_element_by_id('viewall').send_keys(Keys.ENTER)
-obj.execute_script("return openall(1)")
-# obj.save_screenshot('12.png')
-html = obj.page_source
-obj.quit()
-soup = bs(html,'lxml')
-imgs = soup.find('div',id="content").find_all('img')
-for img in imgs:
-    imglink = img['src']
-    imgname = imglink.split('/')[-1].split('.')[0]
-    print(imglink,imgname)
+
+url = 'http://www.mmjpg.com/home/2'
+curl = 'http://www.mmjpg.com/mm/797'
+
+
+#获取列表链接
+def get_url_list(url):
+    al = []
+    web_data = requests.get(url,headers = headers).text.encode('utf8')
+    soup = bs(web_data,'lxml')
+    time.sleep(2)
+    cats = soup.find('div',class_='pic').find_all('img')
+    links = soup.select('div.pic  span.title a')
+    for link,cat in zip(links,cats):
+        link = link.get('href')
+        title = cat['alt']
+        al.append([link,title])
+    return al
+# get_url_list(url)
+
+
+#下载详情页图片
+def get_img_dt(url):
+    l = []
+    # 重定义heaaders
+    dcap = dict(DesiredCapabilities.PHANTOMJS)
+    dcap["phantomjs.page.setting.userAgeng"] = (UserAgent)
+    obj = webdriver.PhantomJS(executable_path="C:\\myproject\\venv\\selenium\\webdriver\\phantomjs.exe")
+
+    for i in get_url_list(url):
+        tar_url = i[0]
+        tar_name = i[1]
+        # print(tar_url,tar_name)
+        obj.get(tar_url)
+        obj.execute_script("return openall(1)")
+        html = obj.page_source
+        obj.quit()
+        time.sleep(int(random.randint(1,4)))
+        soup = bs(html,'lxml')
+        imgs = soup.find('div',id='content').find_all('img')
+        for img in imgs:
+            imgurl = img['src']
+            imgname = imgurl.split('/')[-1]
+            l.append([imgurl,imgname,tar_name])
+    print(l)
+
+# get_img_dt(url)
+
+#下载图片并保存
+def create_file_save(url):
+    path = 'E:\\pachonglibs\\mmjpg'
+    os.chdir(path)
+    print(os.getcwd())
+    dir_lists = os.listdir(path)
+    for dir_list in dir_lists:
+        if os.path.getsize(dir_list) == 0:
+            os.rmdir(dir_list)
+    for tar_g in get_img_dt(url):
+        target_url = tar_g[0]
+        target_imgname = tar_g[1]
+        target_filename = tar_g[2]
+        if not os.path.exists(target_filename):
+            os.mkdir(target_filename)
+            urllib.request.urlretrieve(target_url,path+target_filename+'\%s' % target_imgname)
+
+create_file_save(url)
