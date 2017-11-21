@@ -22,7 +22,7 @@
 #     imglink = img['src']
 #     imgname = imglink.split('/')[-1].split('.')[0]
 #     print(imglink,imgname)
-bin/python
+# /usr/bin/python
 #-*-encoding:utf-8 -*-
 
 from bs4 import BeautifulSoup as bs
