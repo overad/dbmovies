@@ -1,0 +1,144 @@
+#!/usr/bin/python
+#-*-encoding:utf-8 -*-
+
+from bs4 import BeautifulSoup as bs
+import requests
+import random
+import pymysql
+import time
+from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+conn = pymysql.connect(host='127.0.0.1',port=3306,user='root',passwd='qq124578',db='tmptry',charset='utf8')
+
+
+url = 'https://slamdunk.sports.sina.com.cn/teams'
+
+url2 = 'https://slamdunk.sports.sina.com.cn/team?tid=583ecfff-fb46-11e1-82cb-f4ce4684ea4c'
+
+UA = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+
+headers = {
+    'User-Agent':UA
+}
+
+def get_page_html(url):
+    dcap = dict(DesiredCapabilities.PHANTOMJS)
+    dcap["phantomjs.page.setting.userAgeng"] = (UA)
+    obj = webdriver.PhantomJS(executable_path='C:\\myproject\\venv\\selenium\\webdriver\\phantomjs.exe')
+    time.sleep(2)
+    obj.get(url)
+    html = obj.page_source
+    return html
+
+def get_teams_name(utl):
+    tls = []
+    # playlst = []
+    html = get_page_html(url)
+    soup = bs(html,'lxml')
+    teamNameChs = soup.select('div.team-area-list_info span.team-area-name_1')
+    teamNameEns = soup.select('div.team-area-list_info span.team-area-name_2')
+    links = soup.select('div.team-area-list_info a')
+    hotareas = soup.select('div.team-area-hot_list')
+    hotplays = soup.select('div.team-area-hot_list a')
+    for teamNameCh,teamNameEn,link,hotarea,hotplay in zip(teamNameChs,teamNameEns,links,hotareas,hotplays):
+        teamNameCh = teamNameCh.get_text().strip()
+        teamNameEn = teamNameEn.get_text().strip()
+        link = 'https:' + link.get('href')
+        teamId = hotarea.get('data-tid')
+        # player = hotarea.get_text()
+        tls.append([teamNameCh,teamNameEn,link,teamId])
+        # print(teamNameCh,teamNameEn,link,teamId)
+    # print(tls)
+    return tls
+
+
+#球队明细数据
+def get_team_dts(url):
+    html = get_page_html(url)
+    soup = bs(html, 'lxml')
+    # ranks = soup.select('div.detail div.info-up dl')
+    #获取球队信息
+    ranks = soup.find('div',class_='info-up').find_all('dd')
+    teaminfos = soup.find('div',class_='info-down').find_all('dd')
+    try:
+        seasonrank = ranks[0].get_text().strip()
+        arearank = ranks[1].get_text().strip()
+        curcombat = ranks[2].get_text().strip()
+        mainsta = teaminfos[0].get_text().strip()
+        home = teaminfos[1].get_text().strip()
+        coach = teaminfos[2].get_text().strip()
+        manager = teaminfos[3].get_text().strip()
+        owner = teaminfos[4].get_text().strip()
+        division = teaminfos[5].get_text().strip()
+        champion = teaminfos[6].get_text().strip()
+        print(seasonrank, arearank, curcombat,mainsta,home,coach,manager,owner,division,champion)
+    except IndexError as e:
+        print(e)
+        pass
+
+    #球队球员信息div.part01
+    playdetails = soup.find('div',class_='part01').find_all('tr')[1:]
+    for playdetail in playdetails:
+        pdts = playdetail.find_all('td')
+        try:
+            nameCh = pdts[0].get_text().strip()
+            nameEn = pdts[1].get_text().strip()
+            number = pdts[2].get_text().strip()
+            role = pdts[3].get_text().strip()
+            birth = pdts[4].get_text().strip()
+            age = pdts[5].get_text().strip()
+            playage = pdts[6].get_text().strip()
+            height = pdts[7].get_text().strip()
+            weight = pdts[8].get_text().strip()
+            school = pdts[9].get_text().strip()
+            print(nameCh,nameEn,number,role,birth,age,playage,height,weight,school)
+        except IndexError as e:
+            print(e)
+            pass
+    #获取球员比赛信息
+    batdetails = soup.find('div',class_='part02').find_all('tr')[1:]
+    try:
+        for batdetail in batdetails:
+            dts = batdetail.find_all('td')
+            # print(dts)
+            batname = dts[0].get_text().strip()             #球员
+            batnumber = dts[1].get_text().strip()           #号码
+            batmatchs = dts[2].get_text().strip()           #场次
+            batfirst = dts[3].get_text().strip()            #首发
+            battimes = dts[4].get_text().strip()            #时间
+            batscores = dts[5].get_text().strip()           #得分
+            batshoot = dts[6].get_text().strip()            #投篮
+            batshootper = dts[7].get_text().strip()         #投篮%
+            batthree = dts[8].get_text().strip()            #三分
+            batthreeper = dts[9].get_text().strip()           #三分%
+            batpen = dts[10].get_text().strip()             #罚球
+            batpenper = dts[11].get_text().strip()          #罚球%
+            batfrob = dts[12].get_text().strip()            #前场板
+            battolb = dts[13].get_text().strip()            #总篮板
+            bathelp = dts[14].get_text().strip()            #助攻
+            batmis = dts[15].get_text().strip()             #失误
+            bathmper = dts[16].get_text().strip()           #助失比
+            batsteal = dts[17].get_text().strip()           #抢断
+            batcap = dts[18].get_text().strip()             #盖帽
+            batfoul = dts[19].get_text().strip()            #犯规
+            print(batname, batnumber, batmatchs, batfirst, battimes, batscores, batshoot, batshootper, batthree,
+                  batthreeper, batpen, batpenper, batfrob, battolb, bathelp, batmis, bathmper, batsteal, batcap,
+                  batfoul)
+
+            # print(batname,batnumber)
+    except IndexError as e:
+        print(e)
+        pass
+    # print(batname,batnumber,batmatchs,batfirst,battimes,batscores,batshoot,batshootper,batthree,batthreeper,batpen,batpenper,batfrob,battolb,bathelp,batmis,bathmper,batsteal,batcap,batfoul)
+# get_teams_name(url)
+# get_team_dts(url2)
+
+
+if __name__ == '__main__':
+    lst = get_teams_name(url)
+    for i in lst:
+        tname = i[0]
+        url2 = i[2]
+        print(url2)
+        # get_team_dts(url2)
