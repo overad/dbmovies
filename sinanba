@@ -9,7 +9,7 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-conn = pymysql.connect(host='127.0.0.1',port=3306,user='root',passwd='qq124578',db='tmptry',charset='utf8')
+conn = pymysql.connect(host='127.0.0.1',port=3306,user='root',passwd='******',db='tmptry',charset='utf8')
 
 
 url = 'https://slamdunk.sports.sina.com.cn/teams'
